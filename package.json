@@ -1,18 +1,36 @@
 {
-  "name": "imagemin",
+  "name": "compress-images",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "gulp": "gulp"
+    "compress": "gulp",
+    "lint:check": "eslint --cache",
+    "lint": "eslint --cache \"gulpfile.ts}\" --fix",
+    "format:check": "prettier --check ./",
+    "format": "prettier --write ./"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "sharp",
+    "images"
+  ],
+  "author": "AVZuykov web.zuykov@gmail.com",
   "license": "ISC",
   "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/gulp": "^4.0.17",
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "dotenv": "^16.3.1",
     "gulp": "^4.0.2",
-    "gulp-imagemin": "^9.0.0",
-    "gulp-webp": "^5.0.0",
-    "imagemin-webp": "^8.0.0"
+    "imagemin-webp": "^8.0.0",
+    "mkdirp": "^3.0.1",
+    "sharp": "^0.33.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "prettier": "^3.1.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.2",
+    "eslint-plugin-simple-import-sort": "^10.0.0"
   }
 }
