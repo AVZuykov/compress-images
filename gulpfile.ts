@@ -18,7 +18,7 @@ function compressTask() {
   return src(`${ORIGIN_IMAGES}/**`, { since: lastRun(compressTask) })
     .pipe(filterAndRemovePlugin(AVAILABLE_FORMATS))
     .pipe(compressPlugin())
-    .pipe(dest('dist'))
+    .pipe(dest(COMPRESSED_IMAGES))
 }
 
 function compressPlugin() {
