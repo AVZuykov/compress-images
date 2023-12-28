@@ -1,71 +1,103 @@
-import fs from 'fs'
-import type G from 'glob'
+import fs from 'fs/promises'
 import glob from 'glob'
-import { watch } from 'gulp'
-import { mkdirp } from 'mkdirp'
+import { dest, lastRun, series, src, watch } from 'gulp'
 import path from 'path'
 import sharp from 'sharp'
+import { optimize } from 'svgo'
+import through2 from 'through2'
+import File from 'vinyl'
 
 import 'dotenv/config'
 
 const ORIGIN_IMAGES = process.env.ORIGIN_IMAGES!
 const COMPRESSED_IMAGES = process.env.COMPRESSED_IMAGES!
 
-async function compress() {
-  const globOptions: G.IOptions = { nodir: true }
+const AVAILABLE_FORMATS = ['.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg']
 
-  const originFiles = deleteUnusualFormats(
-    glob.sync(`${ORIGIN_IMAGES}/**`, globOptions),
-  )
-  const compressedFiles = glob.sync(`${ORIGIN_IMAGES}/**`, globOptions)
-
-  const newOrChangedFiles = originFiles.filter((file) => {
-    const { dir: fileDir, name: fileName } = path.parse(file)
-
-    return !compressedFiles.some((compressedFile) => {
-      const { dir: comressedFileDir, name: comressedFileName } =
-        path.parse(compressedFile)
-
-      return (
-        `${replaceDir(fileDir)}/${fileName}` ===
-        `${comressedFileDir}/${comressedFileName}`
-      )
-    })
-  })
-
-  newOrChangedFiles.forEach((file) => {
-    const { dir, name } = path.parse(file)
-
-    const newDirPath = replaceDir(dir)
-
-    mkdirp.sync(newDirPath)
-
-    sharp(file)
-      .withMetadata()
-      .webp()
-      .toFile(`${newDirPath}/${name}.webp`)
-      .catch((err) => {
-        console.log(err)
-      })
-  })
+function compressTask() {
+  return src(`${ORIGIN_IMAGES}/**`, { since: lastRun(compressTask) })
+    .pipe(filterAndRemovePlugin(AVAILABLE_FORMATS))
+    .pipe(compressPlugin())
+    .pipe(dest('dist'))
 }
 
-function replaceDir(path: string) {
-  return path.replace(ORIGIN_IMAGES, COMPRESSED_IMAGES)
-}
+function compressPlugin() {
+  return through2.obj(async function (file: File, enc: string, callback) {
+    try {
+      if (file.isBuffer()) {
+        switch (file.extname) {
+          case '.svg': {
+            const { data: optimizedSvgString } = optimize(file.contents.toString('utf-8'))
+            file.contents = Buffer.from(optimizedSvgString)
+            break
+          }
 
-function deleteUnusualFormats(files: string[]) {
-  return files.filter((file) => {
-    if (file.includes(':Zone.Identifier')) {
-      fs.unlink(file, console.log)
-    } else {
-      return true
+          default: {
+            file.contents = await sharp(file.contents).withMetadata().webp().toBuffer()
+            file.extname = '.webp'
+          }
+        }
+      }
+
+      this.push(file)
+      callback()
+    } catch (error) {
+      const err = error as Error
+      callback(new Error(`Ошибка при обработке файла ${file.path}: ${err.message}`))
     }
   })
 }
 
-export { compress }
-
-export default function () {
-  watch(`${ORIGIN_IMAGES}/**`, { ignoreInitial: false }, compress)
+function filterAndRemovePlugin(ignoreExt: string[] = []) {
+  return through2.obj(async function (file: File, enc: string, callback) {
+    try {
+      if (file.isBuffer()) {
+        if (ignoreExt.some((format) => file.extname.endsWith(format))) {
+          this.push(file)
+        } else {
+          await fs.rm(file.path)
+        }
+      }
+      callback()
+    } catch (error) {
+      const err = error as Error
+      callback(new Error(`Ошибка при удалении файла ${file.path}: ${err.message}`))
+    }
+  })
 }
+
+async function syncFilesTask() {
+  const originFiles = globFiles(ORIGIN_IMAGES)
+  const compressedFiles = globFiles(COMPRESSED_IMAGES)
+
+  const trashFiles = compressedFiles.filter((compressedFilePath) =>
+    originFiles.every((originFilePath) => !compressedFilePath.endsWith(originFilePath))
+  )
+
+  for (const path of trashFiles) {
+    await fs.rm(COMPRESSED_IMAGES + path, { recursive: true, force: true })
+  }
+
+  function globFiles(baseDir: string) {
+    return glob
+      .sync(`${baseDir}/**`)
+      .map((globPath) => {
+        const parsedPath = path.parse(globPath)
+        const pathWithoutExtension = path.join(parsedPath.dir, parsedPath.name)
+        return pathWithoutExtension.replace(baseDir, '')
+      })
+      .filter(Boolean)
+  }
+}
+
+async function delDistTask() {
+  await fs.rm(COMPRESSED_IMAGES, { recursive: true, force: true })
+}
+
+function startWatch() {
+  watch(`${ORIGIN_IMAGES}/**`, { ignoreInitial: false }, series(compressTask, syncFilesTask))
+}
+
+export { compressTask, syncFilesTask, delDistTask }
+
+export default series(delDistTask, startWatch)

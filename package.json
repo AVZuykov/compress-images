@@ -5,7 +5,7 @@
   "scripts": {
     "compress": "gulp",
     "lint:check": "eslint --cache",
-    "lint": "eslint --cache \"gulpfile.ts}\" --fix",
+    "lint": "eslint --cache --fix",
     "format:check": "prettier --check ./",
     "format": "prettier --write ./"
   },
@@ -19,18 +19,20 @@
     "@types/glob": "^8.1.0",
     "@types/gulp": "^4.0.17",
     "@types/node": "^20.10.5",
+    "@types/through2": "^2.0.41",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.16.0",
     "dotenv": "^16.3.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.2",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
     "gulp": "^4.0.2",
     "imagemin-webp": "^8.0.0",
     "mkdirp": "^3.0.1",
-    "sharp": "^0.33.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
     "prettier": "^3.1.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.2",
-    "eslint-plugin-simple-import-sort": "^10.0.0"
+    "sharp": "^0.33.1",
+    "svgo": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }
